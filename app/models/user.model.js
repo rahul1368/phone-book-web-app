@@ -1,12 +1,19 @@
 const sql = require("./db.js");
 
-// constructor
+/**
+ * constructor function to create user objects
+ * @param {Object} User | user object
+ */
 const User = function(User) {
-  this.email = User.email;
+  this.first_email = User.first_email;
+  this.first_phone = User.first_phone;
   this.name = User.name;
-  this.active = User.active;
+  this.dob = User.dob;
 };
 
+/**
+ * API to create new user 
+ */
 User.create = (newUser, result) => {
   sql.query("INSERT INTO user SET ?", newUser, (err, res) => {
     if (err) {
@@ -19,6 +26,27 @@ User.create = (newUser, result) => {
     result(null, { id: res.insertId, ...newUser });
   });
 };
+
+User.search = (filterBy,key,result)=>{
+  console.log(`SELECT * FROM user WHERE ${filterBy} LIKE '${key}%'`);  
+  sql.query(`SELECT * FROM user WHERE ${filterBy} LIKE '${key}%'`, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+
+    if (res.length) {
+      console.log("found User: ", res);
+      result(null, res);
+      return;
+    }
+
+    // not found User with the id
+    result({ kind: "not_found" }, null);
+  });
+}
+
 
 User.findById = (UserId, result) => {
   sql.query(`SELECT * FROM Users WHERE id = ${UserId}`, (err, res) => {

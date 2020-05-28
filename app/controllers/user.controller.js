@@ -8,17 +8,18 @@ exports.create = (req, res) => {
       message: "Content can not be empty!"
     });
   }
-
+  
   // Create a User
-  const User = new User({
+  const newUser = new User({
     name: req.body.name,
     dob: req.body.dob,
     first_email: req.body.first_email,
     first_phone: req.body.first_phone
   });
-
+  console.log('User: ', User);
+  
   // Save User in the database
-  User.create(User, (err, data) => {
+  User.create(newUser, (err, data) => {
     if (err)
       res.status(500).send({
         message:
@@ -41,16 +42,16 @@ exports.findAll = (req, res) => {
 };
 
 // Find a single User with a UserId
-exports.findOne = (req, res) => {
-  User.findById(req.params.UserId, (err, data) => {
+exports.findOne = (req, res) => {console.log("Req Body :",req.body.filterBy,req.body.key);
+  User.search(req.body.filterBy,req.body.key, (err, data) => {
     if (err) {
       if (err.kind === "not_found") {
         res.status(404).send({
-          message: `Not found User with id ${req.params.UserId}.`
+          message: `No record found with key value ${req.body.key} and filterBy :    ${req.body.filterBy}.`
         });
       } else {
         res.status(500).send({
-          message: "Error retrieving User with id " + req.params.UserId
+          message: "Error retrieving User with id " + req.body.UserId
         });
       }
     } else res.send(data);
