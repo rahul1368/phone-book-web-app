@@ -4,7 +4,8 @@ const User = require("../models/user.model.js");
 exports.create = (req, res) => {
   // Validate request
   if (!req.body) {
-    res.status(400).send({
+    res.send({
+      success:false,
       message: "Content can not be empty!"
     });
   }
@@ -21,11 +22,12 @@ exports.create = (req, res) => {
   // Save User in the database
   User.create(newUser, (err, data) => {
     if (err)
-      res.status(500).send({
+      res.send({
+        success:false,
         message:
           err.message || "Some error occurred while creating the User."
       });
-    else res.send(data);
+    else res.send({success:true,data});
   });
 };
 
@@ -34,85 +36,126 @@ exports.findAll = (req, res) => {
   User.getAll((err, data) => {
     if (err)
       res.status(500).send({
+        success:false,
         message:
-          err.message || "Some error occurred while retrieving Users."
+          err.message || "Some error occurred while retrieving users."
       });
-    else res.send(data);
+    else res.send({success:true,data});
   });
 };
 
-// Find a single User with a UserId
-exports.findOne = (req, res) => {console.log("Req Body :",req.body.filterBy,req.body.key);
+// Filter user with some filter and key value
+exports.find = (req, res) => {
   User.search(req.body.filterBy,req.body.key, (err, data) => {
     if (err) {
       if (err.kind === "not_found") {
-        res.status(404).send({
-          message: `No record found with key value ${req.body.key} and filterBy :    ${req.body.filterBy}.`
+        res.send({
+          success:false,
+          message: `No record found with key value ${req.body.key} and filterBy :${req.body.filterBy}.`
         });
       } else {
-        res.status(500).send({
+        res.send({success:false,
           message: "Error retrieving User with id " + req.body.UserId
         });
       }
-    } else res.send(data);
+    } else res.send({success:true,data});
   });
 };
 
-// Update a User identified by the UserId in the request
+// Update a User identified by the first_phone param in the request
 exports.update = (req, res) => {
   // Validate Request
   if (!req.body) {
-    res.status(400).send({
+    res.send({
+      success:false,
       message: "Content can not be empty!"
     });
   }
 
-  console.log(req.body);
-
-  User.updateById(
-    req.params.UserId,
-    new User(req.body),
+  User.updateUser(req.body.first_phone,req.body.other_phones,req.body.other_emails, new User(req.body),
     (err, data) => {
       if (err) {
         if (err.kind === "not_found") {
-          res.status(404).send({
-            message: `Not found User with id ${req.params.UserId}.`
+          res.send({
+            success:false,
+            message: `Not found user with first_phone ${req.body.first_phone}.`
           });
         } else {
-          res.status(500).send({
-            message: "Error updating User with id " + req.params.UserId
+          res.send({
+            success:false,
+            message: "Error updating user with first_phone " + req.body.first_phone
           });
         }
-      } else res.send(data);
+      } else res.send({success:true,data});
     }
   );
 };
 
-// Delete a User with the specified UserId in the request
-exports.delete = (req, res) => {
-  User.remove(req.params.UserId, (err, data) => {
+// Delete phone or email with the specified first_phone in the request
+exports.deletePhoneOrEmail = (req, res) => {
+  User.remove(req.body.first_phone,req.body.col,req.body.col_value, (err, data) => {
     if (err) {
       if (err.kind === "not_found") {
-        res.status(404).send({
-          message: `Not found User with id ${req.params.UserId}.`
+        res.send({success:false,
+          message: `Not found record with first_phone ${req.body.first_phone}.`
         });
       } else {
-        res.status(500).send({
-          message: "Could not delete User with id " + req.params.UserId
+        res.send({
+          success:false,
+          message: "Could not delete record with first_phone " + req.body.first_phone
         });
       }
-    } else res.send({ message: `User was deleted successfully!` });
+    } else res.send({success:true, message: `record was deleted successfully!`,data });
   });
 };
 
+
+exports.deleteUser = (req, res) => {
+  User.removeUser(req.body.first_phone, (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.send({
+          success:false,message: `Not found record with first_phone ${req.body.first_phone}.`
+        });
+      } else {
+        res.send({
+          success:false,message: "Could not delete record with first_phone " + req.body.first_phone
+        });
+      }
+    } else res.send({success:true,message: `record was deleted successfully!` ,data});
+  });
+};
 // Delete all Users from the database.
 exports.deleteAll = (req, res) => {
   User.removeAll((err, data) => {
     if (err)
-      res.status(500).send({
+      res.send({
+        success:false,
         message:
           err.message || "Some error occurred while removing all Users."
       });
-    else res.send({ message: `All Users were deleted successfully!` });
+    else res.send({ success:false,message: `All Users were deleted successfully!` });
   });
 };
+
+//Add other phone
+
+exports.addOtherPhone =(req,res) => {
+  User.addOtherPhone(req.body.first_phone,req.body.other_phone,(err,data)=>{
+    if(err){
+      res.send({success:false,message:"Something went wrong"})
+    }
+    res.send({success:true,data})
+  })
+}
+
+//Add other email
+
+exports.addOtherEmail =(req,res) => {console.log("controller Values:",req.body.other_email,req.body.first_phone)
+  User.addOtherEmail(req.body.first_phone,req.body.other_email,(err,data)=>{
+    if(err){
+      res.send({success:false,message:"Something went wrong"})
+    }
+    res.send({success:true,data})
+  })
+}
