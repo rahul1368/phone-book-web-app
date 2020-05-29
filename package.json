@@ -13,10 +13,15 @@
     "restapi"
   ],
   "author": "Robin Singh",
+  "proxy": "http://localhost:5000",
   "license": "ISC",
   "dependencies": {
+    "@babel/core": "^7.10.1",
+    "@babel/plugin-proposal-class-properties": "^7.10.1",
     "body-parser": "^1.19.0",
+    "bootstrap": "^4.5.0",
     "express": "^4.17.1",
-    "mysql": "^2.17.1"
+    "mysql": "^2.17.1",
+    "react-bootstrap": "^1.0.1"
   }
 }

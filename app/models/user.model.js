@@ -55,7 +55,7 @@ User.search = (filterBy,key,result)=>{
  * API to fetch all users details
  */
 User.getAll = result => {
-  const query1 ="SELECT name,u.first_phone,dob,ucm.other_phones FROM `user` u LEFT join (SELECT first_phone,GROUP_CONCAT(DISTINCT other_phone SEPARATOR ',') as other_phones FROM user_contacts_mapping GROUP BY user_contacts_mapping.first_phone) ucm on u.first_phone = ucm.first_phone";
+  const query1 ="SELECT name,u.first_phone,u.first_email,dob,ucm.other_phones FROM `user` u LEFT join (SELECT first_phone,GROUP_CONCAT(DISTINCT other_phone SEPARATOR ',') as other_phones FROM user_contacts_mapping GROUP BY user_contacts_mapping.first_phone) ucm on u.first_phone = ucm.first_phone";
   const query2 = "SELECT name,u.first_phone,dob,uem.other_emails FROM user u LEFT join (SELECT first_phone,GROUP_CONCAT(DISTINCT other_email SEPARATOR ',') as other_emails FROM user_email_mapping GROUP BY user_email_mapping.first_phone) uem on u.first_phone = uem.first_phone";
   sql.query(`${query1};${query2}`, (err, res) => {
     if (err) {
@@ -101,8 +101,15 @@ User.updateUser = (first_phone,other_phones,other_emails, User, result) => {
   })
 
   query3 += ` ON DUPLICATE KEY UPDATE other_email = VALUES(other_email)`
+  let finalQuery=`${query1};`;
+  if(other_phones.length>1){
+    finalQuery+=`${query2};`
+  }
+  if(other_emails.length>1){
+    finalQuery+=`${query3};`
+  }
   sql.query(
-    `${query1};${query2};${query3}`,
+    `${finalQuery}`,
     (err, res) => {
       if (err) {
         console.log("error: ", err);
@@ -117,7 +124,9 @@ User.updateUser = (first_phone,other_phones,other_emails, User, result) => {
       }
 
       console.log("updated User: ", { first_phone: first_phone, ...User });
-      result(null, { first_phone: first_phone, ...User });
+      other_phones = other_phones.join(",")
+      other_emails = other_emails.join(",")
+      result(null, { first_phone: first_phone,other_phones,other_emails , ...User });
     }
   );
 };
