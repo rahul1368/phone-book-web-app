@@ -92,7 +92,6 @@ exports.update = (req, res) => {
 
   User.updateUser(req.body.first_phone,req.body.other_phones,req.body.other_emails, new User(req.body),
     (err, data) => {
-      data.sort(dynamicSort("name"));
       if (err) {
         if (err.kind === "not_found") {
           res.send({
@@ -113,7 +112,7 @@ exports.update = (req, res) => {
 // Delete phone or email with the specified first_phone in the request
 exports.deletePhoneOrEmail = (req, res) => {
   User.remove(req.body.first_phone,req.body.col,req.body.col_value, (err, data) => {
-    data.sort(dynamicSort("name"));
+
     if (err) {
       if (err.kind === "not_found") {
         res.send({success:false,
@@ -132,7 +131,7 @@ exports.deletePhoneOrEmail = (req, res) => {
 
 exports.deleteUser = (req, res) => {
   User.removeUser(req.body.first_phone, (err, data) => {
-    data.sort(dynamicSort("name"));
+    
     if (err) {
       if (err.kind === "not_found") {
         res.send({
@@ -149,7 +148,7 @@ exports.deleteUser = (req, res) => {
 // Delete all Users from the database.
 exports.deleteAll = (req, res) => {
   User.removeAll((err, data) => {
-    data.sort(dynamicSort("name"));
+ 
     if (err)
       res.send({
         success:false,

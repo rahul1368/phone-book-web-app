@@ -9,7 +9,7 @@ const app = express();
 //app.use(express.static(path.join(__dirname, 'build')));
 
 //For Development
-app.use(express.static(path.join(__dirname, 'client/dist')));
+app.use(express.static(path.join(__dirname, 'frontend/client/dist')));
 
 
 // parse requests of content-type - application/json
@@ -26,7 +26,7 @@ app.use(bodyParser.json({limit: '50mb', extended: true}));
 // });
 
 app.get('/', function (req, res) {
-  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+  res.sendFile(path.join(__dirname, 'frontend/client/dist', 'index.html'));
 });
 app.use("/api",router);
 

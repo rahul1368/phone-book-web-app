@@ -1,6 +1,7 @@
 import React from 'react';
 
 const InputForm = props => {
+
     return(
         <form action="/action_page.php">
             <div className="form-group">
@@ -11,8 +12,9 @@ const InputForm = props => {
                 <label htmlFor="first_phone">Mobile Number</label>
                 <div style={{display:"flex"}}>
                     <input type="tel" className="form-control" name="first_phone" value={`+91 ${props.first_phone || ""}`} disabled={props.btnTxt == "Save"} id="first_phone" onChange={props.inputChangeHandler} />
+                    {(props.btnTxt=="Save")&&
                     <button type="button" data-actionid ="plus" onClick={props.addPhone} style={{borderRadius:"50%",marginLeft:"2px"}}><span data-actionid="plus" className="glyphicon glyphicon-plus"></span></button>
-                </div>
+                     } </div>
             </div>
             {
                 props.otherPhoneCount > 0 &&
@@ -41,8 +43,10 @@ const InputForm = props => {
                 <label htmlFor="first_email">Email</label>
                 <div style={{display:"flex"}}>
                     <input type="email" className="form-control" name="first_email" value={props.first_email || ""} disabled={props.btnTxt == "Save"} id="first_email" onChange={props.inputChangeHandler} />
-                    <button type="button" data-actionid="plus" onClick={props.addEmail} style={{borderRadius:"50%",marginLeft:"2px"}}><span data-actionid="plus" className="glyphicon glyphicon-plus"></span></button>
-                </div>
+                    { (props.btnTxt=="Save")&&
+                        <button type="button" data-actionid="plus" onClick={props.addEmail} style={{borderRadius:"50%",marginLeft:"2px"}}><span data-actionid="plus" className="glyphicon glyphicon-plus"></span></button>
+                    }
+                        </div>
                 {
                 props.otherEmailCount > 0 &&
                 [...Array(props.otherEmailCount+1).keys()].map((key,index)=>{
