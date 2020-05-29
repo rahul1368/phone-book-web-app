@@ -31,8 +31,7 @@ User.create = (newUser, result) => {
  * API to search by name or phone number or email
  */
 User.search = (filterBy,key,result)=>{
-  console.log(`SELECT * FROM user WHERE ${filterBy} LIKE '${key}%'`);  
-  sql.query(`SELECT * FROM user WHERE ${filterBy} LIKE '${key}%'`, (err, res) => {
+  sql.query(`SELECT * FROM user WHERE first_phone LIKE '${key}%' OR first_email LIKE '${key}%' OR name LIKE '${key}%'`, (err, res) => {
     if (err) {
       console.log("error: ", err);
       result(err, null);

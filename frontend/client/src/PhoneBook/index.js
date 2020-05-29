@@ -25,7 +25,9 @@ export default class PhoneBook extends Component{
             headingTxt:"",
             btnTxt:"",
             otherPhoneCount:0,
-            otherPhones:{}
+            otherPhones:{},
+            searchValue:"",
+            isFetching:false
         }
         
         this.setCurrentPageId = this.setCurrentPageId.bind(this)
@@ -39,26 +41,67 @@ export default class PhoneBook extends Component{
         this.saveBtnHandler = this.saveBtnHandler.bind(this)
         this.addPhone = this.addPhone.bind(this)
         this.setOtherPhone = this.setOtherPhone.bind(this)
+        this.searchByValue = this.searchByValue.bind(this)
+        this.callAPI = this.callAPI.bind(this)
+        this.removeBtnHandler = this.removeBtnHandler.bind(this)
+    }
+    searchByValue(e){
+        let {value} = e.target
+        this.setState({
+            searchValue: value
+        },()=>{
+            if(value.length >=3 || value.length == 0 ){
+                const callback = (response)=>{
+                    this.setState({usersList:response.data,userCount:response.data.length,isFetching:false},()=>{
+                        this.updateUserState()
+                    })
+                }
+                this.callAPI("/api/user/get-user","POST",{filterBy:"none",key:this.state.searchValue},callback)
+            }
+            
+        })
+
+    }
+
+    callAPI(API_URL,method,payload,callback){
+        this.setState({isFetching:true});
+        fetch(API_URL,{method,
+            headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+            }, body: JSON.stringify(payload)}).
+            then(res=>res.json()).
+            then(response=>{
+                if(response.success){
+                    if(callback)
+                    callback(response)
+                }else{
+                    this.setState({error_message:"Something went wrong",isFetching:false})
+                }
+            }).catch(err=>{
+                this.setState({error_message:"Something went wrong"})
+            })
     }
     componentDidMount(){
         let usersList = [], error_message = null;
+        this.setState({isFetching:true})
         fetch('/api/user/all',{method:"GET"}).then(res=>res.json()).
         then(res=>{
             if(res.success){
                 usersList = res.data
                 let userCount = usersList.length
-                this.setState({usersList,userCount},()=>{
+                this.setState({usersList,userCount,isFetching:false},()=>{
                     this.updateUserState();
                 })
             }else{
                 error_message = "Something went wrong!"
-                this.setState({error_message})
+                this.setState({error_message,isFetching:false})
             }
         })
         .catch(err=>{
             console.log(err)
             error_message = "Something went wrong!"
-            this.setState({error_message})
+            this.setState({error_message,isFetching:false})
         })
     }
     /**
@@ -117,6 +160,7 @@ export default class PhoneBook extends Component{
         })
     }
     createNewUser(){
+        this.setState({isFetching:true})
         fetch("/api/user/create-user",{method:"POST",
         headers: {
           'Accept': 'application/json',
@@ -125,19 +169,18 @@ export default class PhoneBook extends Component{
         )
         .then(res=>res.json())
         .then(response=>{
-            console.log(response)
             if(response.success){
                 let updateUsersList = this.state.usersList || []
                 updateUsersList.push(response.data)
-                this.setState(state=>({userCount:state.userCount+1,usersList:updateUsersList}))
+                this.setState(state=>({info_message:"Contact successfully added",userCount:state.userCount+1,usersList:updateUsersList,isFetching:false}))
             }else{
                 this.setState({
-                    error_message:"Something went wrong!"
+                    error_message:"Something went wrong!",isFetching:false
                 }) 
             }
         }).catch(err=>{
             this.setState({
-                error_message:"Something went wrong!"
+                error_message:"Something went wrong!",isFetching:false
             })
         })
     }
@@ -227,6 +270,17 @@ export default class PhoneBook extends Component{
         })
 
     }
+    removeBtnHandler(e){
+        let {id} = e.target.dataset
+        const callback = (response)=>{
+            let newCurrentUsersList = this.state.currentUsersList,newTotalUsersList = this.state.usersList
+            newCurrentUsersList = newCurrentUsersList.filter(user => user.first_phone != id)
+            newTotalUsersList = newTotalUsersList.filter(user => user.first_phone != id)
+            this.setState({currentUsersList:newCurrentUsersList,isFetching:false,usersList:newTotalUsersList})
+        }
+        this.callAPI("/api/user/delete-user","POST",{first_phone:id},callback)
+
+    }
     render(){
         return(
         <>
@@ -251,6 +305,16 @@ export default class PhoneBook extends Component{
                 </div>
             }
             {
+                <div className="container">
+                    <div className="form-group">
+                        <input type="text" placeholder="Search by name,primary contact or primary email" value={this.state.searchValue} onChange={this.searchByValue} className="form-control"/>
+                    </div>
+                </div>
+            }
+            {
+                this.state.isFetching && <div className={`container ${style.loader}`}></div>
+            }
+            {
                 this.state.usersList.length > 0 &&
                 <>
                     <UserList 
@@ -271,6 +335,7 @@ export default class PhoneBook extends Component{
                         setOtherPhone={this.setOtherPhone}
                         otherPhoneCount={this.state.otherPhoneCount}
                         otherPhones={this.state.otherPhones}
+                        removeBtnHandler={this.removeBtnHandler}
                     />
                 </>
             }
@@ -280,7 +345,6 @@ export default class PhoneBook extends Component{
 }
 
 export const UserList = (props) => {
-    console.log("UserList:",props)
     let modalProps={
         ...props.userObj,
         inputChangeHandler:props.inputChangeHandler,
@@ -299,7 +363,7 @@ export const UserList = (props) => {
         <div>
             {
                 props.usersList.map((user,index)=>{
-                    return (<Accordion key={index} user={user} editBtnHandler={props.editBtnHandler}/>)
+                    return (<Accordion key={index} user={user} editBtnHandler={props.editBtnHandler} removeBtnHandler={props.removeBtnHandler}/>)
                 })
             }
             <PagingComp currentPageId={props.currentPageId} pagingBtns={props.pagingBtns} maxPageId={props.maxPageId} setCurrentPageId={props.setCurrentPageId}/>
@@ -336,7 +400,7 @@ const Accordion = (props)=>{
                             <div className="col-md-6">
                                 <div className={style.editRemoveBtnGrp}>
                                     <button type="button" data-id={props.user.first_phone} className={`${style.editBtn} btn`} onClick={props.editBtnHandler}>Edit</button>
-                                    <button type="button" data-id={props.user.first_phone} className={`${style.removeBtn} btn`}>Remove</button>
+                                    <button type="button" data-id={props.user.first_phone} className={`${style.removeBtn} btn`} onClick={props.removeBtnHandler} >Remove</button>
                                 </div>
                             </div>
                         </div>

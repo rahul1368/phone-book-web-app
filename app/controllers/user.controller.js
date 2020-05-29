@@ -55,7 +55,7 @@ exports.find = (req, res) => {
         });
       } else {
         res.send({success:false,
-          message: "Error retrieving User with id " + req.body.UserId
+          message: "Error retrieving record with key " + req.body.key
         });
       }
     } else res.send({success:true,data});
