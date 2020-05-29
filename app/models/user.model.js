@@ -79,6 +79,9 @@ User.getAll = result => {
 User.updateUser = (first_phone,other_phones,other_emails, User, result) => {
   other_emails = eval(other_emails)
   other_phones = eval(other_phones)
+  console.log("After Evaluation:",other_emails,other_phones,other_phones.length,other_emails.length)
+  // other_phones=other_phones.map((phone=>phone!=''))
+  // other_emails=other_emails.map((email=>email!=''))
   let query1 = `UPDATE user SET name = '${User.name}', dob = '${User.dob}' WHERE first_phone = '${first_phone}'`;
   let query2 = `INSERT INTO user_contacts_mapping (first_phone, other_phone) VALUES `;
   let query3 = `INSERT INTO user_email_mapping (first_phone, other_email) VALUES `;
@@ -101,10 +104,10 @@ User.updateUser = (first_phone,other_phones,other_emails, User, result) => {
 
   query3 += ` ON DUPLICATE KEY UPDATE other_email = VALUES(other_email)`
   let finalQuery=`${query1};`;
-  if(other_phones.length>1){
+  if(other_phones.length>=1){
     finalQuery+=`${query2};`
   }
-  if(other_emails.length>1){
+  if(other_emails.length>=1){
     finalQuery+=`${query3};`
   }
   sql.query(
@@ -125,7 +128,7 @@ User.updateUser = (first_phone,other_phones,other_emails, User, result) => {
       console.log("updated User: ", { first_phone: first_phone, ...User });
       other_phones = other_phones.join(",")
       other_emails = other_emails.join(",")
-      result(null, { first_phone: first_phone,other_phones,other_emails , ...User });
+      result(null, { first_phone: first_phone,other_phones,other_emails , ...User,res,finalQuery,other_emails,other_phones });
     }
   );
 };

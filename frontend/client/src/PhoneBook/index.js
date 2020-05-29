@@ -26,6 +26,8 @@ export default class PhoneBook extends Component{
             btnTxt:"",
             otherPhoneCount:0,
             otherPhones:{},
+            otherEmailCount:0,
+            otherEmails:{},
             searchValue:"",
             isFetching:false
         }
@@ -41,6 +43,8 @@ export default class PhoneBook extends Component{
         this.saveBtnHandler = this.saveBtnHandler.bind(this)
         this.addPhone = this.addPhone.bind(this)
         this.setOtherPhone = this.setOtherPhone.bind(this)
+        this.addEmail = this.addEmail.bind(this)
+        this.setOtherEmail = this.setOtherEmail.bind(this)
         this.searchByValue = this.searchByValue.bind(this)
         this.callAPI = this.callAPI.bind(this)
         this.removeBtnHandler = this.removeBtnHandler.bind(this)
@@ -201,7 +205,28 @@ export default class PhoneBook extends Component{
     editBtnHandler(e){
         let {id} = e.target.dataset
         let user = this.state.currentUsersList.find(obj => obj.first_phone == id);
-        this.setState({userObj:user,headingTxt:"Edit contact",btnTxt:"Save"},()=>{
+        let otherEmails = this.state.otherEmails,otherPhones=this.state.otherPhones
+        let otherEmailCount=this.state.otherEmailCount
+        let otherPhoneCount=this.state.otherPhoneCount
+        if(user.other_emails){
+            let user_email_arr = user.other_emails.split(",");
+            otherEmailCount = user_email_arr.length
+            user_email_arr.map((email,index)=>{
+                let key = `other_email_${index+1}`
+                otherEmails[key]=email
+            })
+
+        }
+        if(user.other_phones){
+            let user_phone_arr = user.other_phones.split(",");
+            otherPhoneCount = user_phone_arr.length
+             user_phone_arr.map((phone,index)=>{
+                let key = `other_phone_${index+1}`
+                otherPhones[key]=phone
+            })
+
+        }
+        this.setState({userObj:user,headingTxt:"Edit contact",btnTxt:"Save",otherEmails,otherPhones,otherEmailCount,otherPhoneCount},()=>{
             $("#myModal").modal()
         })
     }
@@ -210,6 +235,9 @@ export default class PhoneBook extends Component{
      * Save Button Handler
      */
     saveBtnHandler(){
+        let other_phones = (this.state.otherPhoneCount > 0 && Object.keys(this.state.otherPhones).map(key=> this.state.otherPhones[key])) || []
+        let other_emails = (this.state.otherEmailCount > 0 && Object.keys(this.state.otherEmails).map(key=> this.state.otherEmails[key])) || []
+
         fetch("/api/user/update-user",
         {
             method:'post',
@@ -219,8 +247,8 @@ export default class PhoneBook extends Component{
             },
             body:JSON.stringify({
                 ...this.state.userObj,
-                other_phones:[],
-                other_emails:[]
+                other_phones:(other_phones || []),
+                other_emails:other_emails || []
             })}).
             then(res=>res.json()).
             then(response=>{
@@ -248,16 +276,18 @@ export default class PhoneBook extends Component{
      * Add phone in edit or create contact form
      */
     addPhone(e){
-        let {action} = e.target.dataset
-        let index = action == "plus" ? this.state.otherPhoneCount+1:this.state.otherPhoneCount
+        let {actionid} = e.target.dataset
+        let index = actionid == "plus" ? this.state.otherPhoneCount+1:this.state.otherPhoneCount
         let key ='other_phone_'+ index
-        this.setState(state=>({
-            otherPhoneCount: action == "plus" ? state.otherPhoneCount+1 : state.otherPhoneCount-1,
+        let updateVal = actionid == "plus"?(this.state.otherPhoneCount+1):(this.state.otherPhoneCount-1)
+        console.log("addPhone:::actionid",actionid,e.target)
+        this.setState({
+            otherPhoneCount: updateVal,
             otherPhones:{
                 ...this.state.otherPhones,
                 [key]:''
             }
-        }))
+        })
     }
     setOtherPhone(e){
         let {value} = e.target;
@@ -266,6 +296,31 @@ export default class PhoneBook extends Component{
             otherPhones:{
                 ...this.state.otherPhones,
                 [key]:value.split(" ")[1]
+            }
+        })
+
+    }
+
+    addEmail(e){
+        let {actionid} = e.target.dataset
+        let index = actionid == "plus" ? this.state.otherEmailCount+1:this.state.otherEmailCount
+        let key ='other_email_'+ index
+        let updateVal = actionid == "plus"?(this.state.otherEmailCount+1):(this.state.otherEmailCount-1)
+        this.setState({
+            otherEmailCount: updateVal,
+            otherEmails:{
+                ...this.state.otherEmails,
+                [key]:''
+            }
+        })
+    }
+    setOtherEmail(e){
+        let {value} = e.target;
+        let {key} = e.target.dataset
+        this.setState({
+            otherEmails:{
+                ...this.state.otherEmails,
+                [key]:value
             }
         })
 
@@ -336,6 +391,10 @@ export default class PhoneBook extends Component{
                         otherPhoneCount={this.state.otherPhoneCount}
                         otherPhones={this.state.otherPhones}
                         removeBtnHandler={this.removeBtnHandler}
+                        addEmail={this.addEmail}
+                        setOtherEmail={this.setOtherEmail}
+                        otherEmailCount={this.state.otherEmailCount}
+                        otherEmails={this.state.otherEmails}
                     />
                 </>
             }
@@ -355,7 +414,11 @@ export const UserList = (props) => {
         addPhone:props.addPhone,
         setOtherPhone:props.setOtherPhone,
         otherPhoneCount:props.otherPhoneCount,
-        otherPhones:props.otherPhones
+        otherPhones:props.otherPhones,
+        addEmail:props.addEmail,
+        setOtherEmail:props.setOtherEmail,
+        otherEmailCount:props.otherEmailCount,
+        otherEmails:props.otherEmails
 
     }
     return(
