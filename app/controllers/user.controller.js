@@ -1,5 +1,21 @@
 const User = require("../models/user.model.js");
 
+function dynamicSort(property) {
+  var sortOrder = 1;
+
+  if(property[0] === "-") {
+      sortOrder = -1;
+      property = property.substr(1);
+  }
+
+  return function (a,b) {
+      if(sortOrder == -1){
+          return b[property].localeCompare(a[property]);
+      }else{
+          return a[property].localeCompare(b[property]);
+      }        
+  }
+}
 // Create and Save a new User
 exports.create = (req, res) => {
   // Validate request
@@ -34,6 +50,7 @@ exports.create = (req, res) => {
 // Retrieve all Users from the database.
 exports.findAll = (req, res) => {
   User.getAll((err, data) => {
+    data.sort(dynamicSort("name"));
     if (err)
       res.status(500).send({
         success:false,
@@ -47,6 +64,7 @@ exports.findAll = (req, res) => {
 // Filter user with some filter and key value
 exports.find = (req, res) => {
   User.search(req.body.filterBy,req.body.key, (err, data) => {
+    data.sort(dynamicSort("name"));
     if (err) {
       if (err.kind === "not_found") {
         res.send({
@@ -74,6 +92,7 @@ exports.update = (req, res) => {
 
   User.updateUser(req.body.first_phone,req.body.other_phones,req.body.other_emails, new User(req.body),
     (err, data) => {
+      data.sort(dynamicSort("name"));
       if (err) {
         if (err.kind === "not_found") {
           res.send({
@@ -94,6 +113,7 @@ exports.update = (req, res) => {
 // Delete phone or email with the specified first_phone in the request
 exports.deletePhoneOrEmail = (req, res) => {
   User.remove(req.body.first_phone,req.body.col,req.body.col_value, (err, data) => {
+    data.sort(dynamicSort("name"));
     if (err) {
       if (err.kind === "not_found") {
         res.send({success:false,
@@ -112,6 +132,7 @@ exports.deletePhoneOrEmail = (req, res) => {
 
 exports.deleteUser = (req, res) => {
   User.removeUser(req.body.first_phone, (err, data) => {
+    data.sort(dynamicSort("name"));
     if (err) {
       if (err.kind === "not_found") {
         res.send({
@@ -128,6 +149,7 @@ exports.deleteUser = (req, res) => {
 // Delete all Users from the database.
 exports.deleteAll = (req, res) => {
   User.removeAll((err, data) => {
+    data.sort(dynamicSort("name"));
     if (err)
       res.send({
         success:false,
