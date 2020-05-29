@@ -1,0 +1,394 @@
+import React,{useState,Component} from 'react';
+import PagingComp from './PagingComponent';
+import Modal from './Modal';
+import style from './css/accordion.css';
+import { timingSafeEqual } from 'crypto';
+
+export default class PhoneBook extends Component{
+    constructor(props){
+        super(props)
+        this.userObjConstructor = function(name,first_email,first_phone,dob){
+            this.name = name;
+            this.first_email = first_email;
+            this.first_phone =first_phone;
+            this.dob = dob
+        }
+        this.state = {
+            usersList:[],
+            error_message: null,
+            pagingBtns:[],
+            currentPageId: 1,
+            maxPageId:null,
+            currentUsersList:[],
+            userCount:null,
+            userObj:new this.userObjConstructor(null,null,null,null),
+            headingTxt:"",
+            btnTxt:"",
+            otherPhoneCount:0,
+            otherPhones:{}
+        }
+        
+        this.setCurrentPageId = this.setCurrentPageId.bind(this)
+        this.getUsersListByPageId = this.getUsersListByPageId.bind(this)
+        this.userObjConstructor = this.userObjConstructor.bind(this)
+        this.inputChangeHandler = this.inputChangeHandler.bind(this)
+        this.createNewUser = this.createNewUser.bind(this)
+        this.updateUserState = this.updateUserState.bind(this)
+        this.resetUser = this.resetUser.bind(this)
+        this.editBtnHandler=this.editBtnHandler.bind(this)
+        this.saveBtnHandler = this.saveBtnHandler.bind(this)
+        this.addPhone = this.addPhone.bind(this)
+        this.setOtherPhone = this.setOtherPhone.bind(this)
+    }
+    componentDidMount(){
+        let usersList = [], error_message = null;
+        fetch('/api/user/all',{method:"GET"}).then(res=>res.json()).
+        then(res=>{
+            if(res.success){
+                usersList = res.data
+                let userCount = usersList.length
+                this.setState({usersList,userCount},()=>{
+                    this.updateUserState();
+                })
+            }else{
+                error_message = "Something went wrong!"
+                this.setState({error_message})
+            }
+        })
+        .catch(err=>{
+            console.log(err)
+            error_message = "Something went wrong!"
+            this.setState({error_message})
+        })
+    }
+    /**
+     * On initialization or after adding a user this function will update user state
+     */
+    updateUserState(){
+        let pagingBtns=[],userCount=this.state.userCount
+        let fullPages = parseInt(userCount/4) 
+        let pageCount = userCount <=4 ? 1 :fullPages + parseInt((userCount-fullPages*4)%4 == 0 ? 0 : 1);
+        //Paging Button Constructor
+        let pagingBtnObjConstrutor = function(i){
+            this.text = i;
+            this.id = i;
+            this.style = {
+                // height:"20px",
+                // width:"20px"
+            }
+        }
+        for(let i=1;i<=pageCount;i++){
+            let pageBtnObj = new pagingBtnObjConstrutor(i)
+            pagingBtns.push(pageBtnObj)
+        }
+        let currentUsersList = this.getUsersListByPageId(this.state.currentPageId)
+        this.setState({pagingBtns,maxPageId:pageCount,currentUsersList:(currentUsersList || this.state.currentUsersList)})
+    }
+    getUsersListByPageId(pageId){
+        if(pageId >= 1){
+            let i = (pageId-1)*4,startId = (pageId-1)*4;
+            let newUsersList = []
+            while(i-startId < 4 && i < this.state.userCount){
+                newUsersList.push(this.state.usersList[i])
+                i+=1
+            }
+            return newUsersList
+        }
+        return null
+    }
+    setCurrentPageId(pageId){
+        if(this.state.currentPageId != pageId){
+            this.setState({currentPageId:parseInt(pageId)},()=>{
+                //Updating usersList
+                let newUsersList = this.getUsersListByPageId(pageId)
+                if(newUsersList){
+                    this.setState({currentUsersList:newUsersList})
+                }
+            })
+        }
+    }
+    inputChangeHandler(e){
+        let {name,value} = e.target;
+        this.setState({
+            userObj:{
+                ...this.state.userObj,
+                [name]:name == "first_phone" ? value.split(" ")[1]:value
+            }
+        })
+    }
+    createNewUser(){
+        fetch("/api/user/create-user",{method:"POST",
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }, body: JSON.stringify(this.state.userObj)}
+        )
+        .then(res=>res.json())
+        .then(response=>{
+            console.log(response)
+            if(response.success){
+                let updateUsersList = this.state.usersList || []
+                updateUsersList.push(response.data)
+                this.setState(state=>({userCount:state.userCount+1,usersList:updateUsersList}))
+            }else{
+                this.setState({
+                    error_message:"Something went wrong!"
+                }) 
+            }
+        }).catch(err=>{
+            this.setState({
+                error_message:"Something went wrong!"
+            })
+        })
+    }
+
+    /**
+     * Function to reset user object to null when we want to create a new user
+     */
+    resetUser(){
+        this.setState({
+            userObj: new this.userObjConstructor(null,null,null,null),
+            headingTxt:"Add new contact",
+            btnTxt:"Add"
+        })
+    }
+    /**
+     * Function to edit user
+     */
+    editBtnHandler(e){
+        let {id} = e.target.dataset
+        let user = this.state.currentUsersList.find(obj => obj.first_phone == id);
+        this.setState({userObj:user,headingTxt:"Edit contact",btnTxt:"Save"},()=>{
+            $("#myModal").modal()
+        })
+    }
+
+    /**
+     * Save Button Handler
+     */
+    saveBtnHandler(){
+        fetch("/api/user/update-user",
+        {
+            method:'post',
+            headers:{
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body:JSON.stringify({
+                ...this.state.userObj,
+                other_phones:[],
+                other_emails:[]
+            })}).
+            then(res=>res.json()).
+            then(response=>{
+                let updatedUser = response.data
+                let i = -1;
+                this.state.currentUsersList.find((user,index) => {if(user.first_phone == this.state.userObj.first_phone){i=index}})
+                let newUsersList = JSON.parse(JSON.stringify(this.state.currentUsersList))
+                if(i>=0){
+                    newUsersList[i] = updatedUser
+                }
+                if(response.success){
+                    this.setState({info_message:"Contact updated successfully",
+                    currentUsersList:newUsersList
+                })
+                }else{
+                    this.setState({error_message:"Something went wrong"})
+                }
+            }).
+            catch(err=>{
+                this.setState({error_message:"Something went wrong"})
+            })
+    }
+
+    /**
+     * Add phone in edit or create contact form
+     */
+    addPhone(e){
+        let {action} = e.target.dataset
+        let index = action == "plus" ? this.state.otherPhoneCount+1:this.state.otherPhoneCount
+        let key ='other_phone_'+ index
+        this.setState(state=>({
+            otherPhoneCount: action == "plus" ? state.otherPhoneCount+1 : state.otherPhoneCount-1,
+            otherPhones:{
+                ...this.state.otherPhones,
+                [key]:''
+            }
+        }))
+    }
+    setOtherPhone(e){
+        let {value} = e.target;
+        let {key} = e.target.dataset
+        this.setState({
+            otherPhones:{
+                ...this.state.otherPhones,
+                [key]:value.split(" ")[1]
+            }
+        })
+
+    }
+    render(){
+        return(
+        <>
+            {
+                this.state.info_message && 
+                <div className="container">
+                    <p style={{color:"green"}}>
+                        <span className="glyphicon glyphicon-ok"></span>
+                        &nbsp;
+                        {this.state.info_message}
+                    </p>
+                </div>
+            }
+            {
+                this.state.error_message && 
+                <div className="container">
+                    <p style={{color:"red"}}>
+                        <span className="glyphicon glyphicon-remove"></span>
+                        &nbsp;
+                        {this.state.error_message}
+                    </p>
+                </div>
+            }
+            {
+                this.state.usersList.length > 0 &&
+                <>
+                    <UserList 
+                        usersList={this.state.currentUsersList} 
+                        pagingBtns={this.state.pagingBtns} 
+                        maxPageId={this.state.maxPageId} 
+                        currentPageId={this.state.currentPageId} 
+                        setCurrentPageId={this.setCurrentPageId} 
+                        userObj={this.state.userObj}
+                        inputChangeHandler={this.inputChangeHandler}
+                        createNewUser = {this.createNewUser}
+                        resetUser = {this.resetUser}
+                        editBtnHandler={this.editBtnHandler}
+                        headingTxt={this.state.headingTxt}
+                        btnTxt={this.state.btnTxt}
+                        saveBtnHandler={this.saveBtnHandler}
+                        addPhone={this.addPhone}
+                        setOtherPhone={this.setOtherPhone}
+                        otherPhoneCount={this.state.otherPhoneCount}
+                        otherPhones={this.state.otherPhones}
+                    />
+                </>
+            }
+        </>
+        )
+    }
+}
+
+export const UserList = (props) => {
+    console.log("UserList:",props)
+    let modalProps={
+        ...props.userObj,
+        inputChangeHandler:props.inputChangeHandler,
+        headingTxt:props.headingTxt,
+        btnTxt:props.btnTxt,
+        createNewUser:props.createNewUser,
+        saveBtnHandler:props.saveBtnHandler,
+        addPhone:props.addPhone,
+        setOtherPhone:props.setOtherPhone,
+        otherPhoneCount:props.otherPhoneCount,
+        otherPhones:props.otherPhones
+
+    }
+    return(
+    <>
+        <div>
+            {
+                props.usersList.map((user,index)=>{
+                    return (<Accordion key={index} user={user} editBtnHandler={props.editBtnHandler}/>)
+                })
+            }
+            <PagingComp currentPageId={props.currentPageId} pagingBtns={props.pagingBtns} maxPageId={props.maxPageId} setCurrentPageId={props.setCurrentPageId}/>
+        </div>
+        <button type="button" style={{borderRadius:"50%",backgroundColor:"black",marginLeft:"95%"}} onClick={props.resetUser} className="btn btn-info btn-lg" data-toggle="modal" data-target="#myModal"><span className="glyphicon glyphicon-plus"></span></button>
+        <Modal {...modalProps}/>
+    </> 
+
+    )
+}
+
+const Accordion = (props)=>{
+    const [active,setActive] = useState(false);
+    const toogle = (e)=>{        
+        setActive(!active)
+        let panel = e.target.nextElementSibling;
+        if (panel.style.maxHeight) {
+            panel.style.maxHeight = null;
+        } else {
+            panel.style.maxHeight = panel.scrollHeight + "px";
+        } 
+    }
+    return(
+        <>
+            <div className="container">
+                <button className={active ? `${style.accordion} ${style.active}`:`${style.accordion}`} onClick={toogle} >{props.user.name}</button>
+                <div className={`${style.panel}`}>
+                    <h5><b>{props.user.name}</b></h5>
+                    <div className={"container"}>
+                        <div className="row">
+                            <div className="col-md-6">
+                                <span>{props.user.dob.split("T")[0].split("-").reverse().join("/")}</span>
+                            </div>
+                            <div className="col-md-6">
+                                <div className={style.editRemoveBtnGrp}>
+                                    <button type="button" data-id={props.user.first_phone} className={`${style.editBtn} btn`} onClick={props.editBtnHandler}>Edit</button>
+                                    <button type="button" data-id={props.user.first_phone} className={`${style.removeBtn} btn`}>Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="clearfix"></div>
+                        <div className={`${style.userItems}`}>
+                            <div className={"row"}>
+                                <div className={"col-md-6"}>
+                                    <div className="row" style={{margin:"1%"}}>
+                                        <span className="glyphicon glyphicon-earphone"></span>
+                                        &nbsp;
+                                        <span>+91 {props.user.first_phone}</span>
+                                    </div>
+
+                                    {
+                                        props.user.other_phones && props.user.other_phones.split(",").map((phone,index)=>{
+                                        return(
+                                            <div className="row" key={index} style={{margin:"1%"}}>
+                                                <span className="glyphicon glyphicon-earphone"></span>
+                                                &nbsp;
+                                                <span>+91 {phone}</span>
+                                            </div>
+                                        )
+                                        })
+                                    }
+                                </div>
+                                <div className={"col-md-6"}>
+                                    <div className="row" style={{margin:"1%"}}>
+                                        <span className="glyphicon glyphicon-envelope"></span>
+                                        &nbsp;
+                                        <span className={style.rowItem}>{props.user.first_email}</span>
+                                    </div>
+
+                                    {
+                                        props.user.other_emails && props.user.other_emails.split(",").map((email,index)=>{
+                                        return(
+                                            <div className="row" key={index} style={{margin:"1%"}}>
+                                                <span className="glyphicon glyphicon-envelope"></span>
+                                                &nbsp;
+                                                <span>{email}</span>
+                                            </div>
+                                        )
+                                        })
+                                    }
+                                </div>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>   
+                </div>
+            </div>    
+        </> 
+
+    )
+}
